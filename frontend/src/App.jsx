@@ -2,6 +2,10 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
+import AiInvoiceAssistant from "./AiInvoiceAssistant";
+
+
+
 const API = "http://127.0.0.1:8000";
 
 export default function App() {
@@ -151,6 +155,9 @@ export default function App() {
             <p>◯ Cloud Deployment</p>
           </div>
         </div>
+
+        
+        <AiInvoiceAssistant onCreated={loadInvoices} />
 
         <section className="card invoice-section">
           <h2>Create Sandbox Invoice</h2>
