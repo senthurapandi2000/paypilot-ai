@@ -6,6 +6,7 @@ const API = "http://127.0.0.1:8000";
 
 export default function AiInvoiceAssistant({ onCreated }) {
   const [message, setMessage] = useState("");
+  const [draftContext, setDraftContext] = useState("");
   const [conversation, setConversation] = useState([]);
   const [preview, setPreview] = useState(null);
   const [approvalId, setApprovalId] = useState(null);
@@ -23,14 +24,26 @@ export default function AiInvoiceAssistant({ onCreated }) {
   async function prepareInvoice(event) {
     event.preventDefault();
 
-    const instruction = message.trim();
-    if (!instruction || busy || approvalId) return;
+    const typed = message.trim();
+    const instruction = draftContext
+     ? `${draftContext}\nAdditional details or corrections: ${typed}`
+     : typed;
+
+    if (!typed || busy || approvalId) return;
+
+    if (instruction.length > 1000) {
+        setError(
+            "This conversation is too long. Refresh the page " +
+            "to begin a new invoice."
+        );
+        return;
+    }
 
     setBusy(true);
     setError("");
     setNotice("");
     setPreview(null);
-    addMessage("user", instruction);
+    addMessage("user", typed);
 
     try {
       const response = await fetch(`${API}/api/ai/prepare`, {
@@ -53,8 +66,11 @@ export default function AiInvoiceAssistant({ onCreated }) {
       setMessage("");
 
       if (data.ready) {
+        setDraftContext("");
         setPreview(data.preview);
         setApprovalId(data.approval_id);
+      } else {
+        setDraftContext(instruction);
       }
     } catch (err) {
       setError(err.message);
