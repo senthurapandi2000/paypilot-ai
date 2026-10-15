@@ -6,10 +6,16 @@ import AiInvoiceAssistant from "./AiInvoiceAssistant";
 
 
 
-const API = "http://127.0.0.1:8000";
+const API =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8000";
 
 export default function App() {
   const manualRequestId = useRef(null);
+  const [demoKey, setDemoKey] = useState("");
+  const [keyInput, setKeyInput] = useState("");
+  const [unlockError, setUnlockError] = useState("");
+  const [unlockBusy, setUnlockBusy] = useState(false);
   const [backend, setBackend] = useState("Checking...");
   const [paypal, setPaypal] = useState("Not tested");
   const [message, setMessage] = useState("");
@@ -24,9 +30,59 @@ export default function App() {
     unit_price: "49.99"
   });
 
-  async function loadInvoices() {
-    const response = await fetch(`${API}/api/invoices/list`);
 
+  function apiFetch(path, options = {}) {
+    return fetch(`${API}${path}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        "X-Demo-Key": demoKey
+      }
+    });
+  }
+
+  async function unlockDemo(event) {
+    event.preventDefault();
+
+    const candidate = keyInput.trim();
+
+    if (!candidate || unlockBusy) return;
+
+    setUnlockBusy(true);
+    setUnlockError("");
+
+    try {
+      const response = await fetch(
+        `${API}/api/demo/verify`,
+        {
+          headers: {
+            "X-Demo-Key": candidate
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? "Incorrect demo passphrase."
+            : "Demo verification failed. Check the backend."
+        );
+      }
+
+      setDemoKey(candidate);
+      setKeyInput("");
+
+    } catch (err) {
+      setUnlockError(err.message);
+
+    } finally {
+      setUnlockBusy(false);
+    }
+  }
+
+
+  async function loadInvoices() {
+    const response = await apiFetch("/api/invoices/list");
     if (!response.ok) {
       throw new Error("Unable to load invoices");
     }
@@ -44,11 +100,11 @@ export default function App() {
     loadInvoices().catch(() => {
       setError("Could not load existing invoices.");
     });
-  }, []);
+  }, [demoKey]);
 
   async function testPayPal() {
     try {
-      const response = await fetch(`${API}/api/paypal/check`);
+      const response = await apiFetch("/api/paypal/check");
       const data = await response.json();
 
       setPaypal(data.connected ? "Connected" : "Failed");
@@ -74,7 +130,7 @@ export default function App() {
     setMessage("");
 
     try {
-      const response = await fetch(`${API}/api/invoices/draft`, {
+      const response = await apiFetch("/api/invoices/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": requestId},
         body: JSON.stringify({
@@ -115,6 +171,92 @@ export default function App() {
       ...form,
       [e.target.name]: e.target.value
     });
+  }
+
+
+  // Day 5: Sandbox Demo Access
+  if (!demoKey) {
+    return (
+      <div className="app">
+        <main
+          className="container"
+          style={{
+            minHeight: "85vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+        >
+          <section
+            className="card invoice-section"
+            style={{
+              width: "100%",
+              maxWidth: "520px",
+              textAlign: "center"
+            }}
+          >
+            <h1>PayPilot AI</h1>
+            <h2>Sandbox Demo Access</h2>
+
+            <p>
+              Enter your private demo passphrase to
+              access the AI-powered payment assistant.
+            </p>
+
+            <form
+              onSubmit={unlockDemo}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                marginTop: "24px"
+              }}
+            >
+              <label htmlFor="demo-passphrase">
+                Demo Passphrase
+              </label>
+
+              <input
+                id="demo-passphrase"
+                type="password"
+                value={keyInput}
+                onChange={(e) =>
+                  setKeyInput(e.target.value)
+                }
+                placeholder="Enter demo passphrase"
+                autoComplete="off"
+                required
+              />
+
+              <button
+                type="submit"
+                disabled={unlockBusy}
+              >
+                {unlockBusy
+                  ? "Verifying..."
+                  : "Unlock Sandbox Demo"}
+              </button>
+            </form>
+
+            {unlockError && (
+              <p
+                role="alert"
+                style={{
+                  color: "#ffb4b4",
+                  marginTop: "16px"
+                }}
+              >
+                {unlockError}
+              </p>
+            )}
+
+            <p style={{ marginTop: "24px" }}>
+              Sandbox mode only. No real payments.
+            </p>
+          </section>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -172,7 +314,10 @@ export default function App() {
         </div>
 
 
-        <AiInvoiceAssistant onCreated={loadInvoices} />
+        <AiInvoiceAssistant
+          onCreated={loadInvoices}
+          demoKey={demoKey}
+        />
 
         <section className="card invoice-section">
           <h2>Create Sandbox Invoice</h2>
