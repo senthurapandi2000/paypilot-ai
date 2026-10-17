@@ -4,9 +4,8 @@ import re
 import json
 import os
 import secrets
-import time
+from approval_store import ApprovalStore, TooManyApprovals
 from decimal import Decimal
-from threading import Lock
 
 import httpx
 from fastapi import HTTPException
@@ -32,13 +31,23 @@ class DraftCandidate(BaseModel):
     )
 
 
-# Local development only. Pending approvals expire after 10 minutes.
-PENDING = {}
-PENDING_LOCK = Lock()
+
+# Day 6 - Persistent SQLite approval storage
+# Pending approvals expire after 10 minutes.
 APPROVAL_TTL = 600
 
 
-def install_ai_routes(app, InvoiceInput, create_draft_invoice):
+def install_ai_routes(
+    app,
+    InvoiceInput,
+    create_draft_invoice,
+    approval_store=None
+):
+    store = (
+        approval_store
+        if approval_store is not None
+        else ApprovalStore()
+    )
 
     @app.post("/api/ai/prepare")
     async def prepare_invoice(request: PrepareRequest):
@@ -218,28 +227,20 @@ def install_ai_routes(app, InvoiceInput, create_draft_invoice):
 
         approval_id = secrets.token_urlsafe(32)
 
-        with PENDING_LOCK:
-            now = time.monotonic()
 
-            expired = [
-                key for key, value in PENDING.items()
-                if value["expires"] < now
-            ]
+        try:
+            store.create(
+                approval_id=approval_id,
+                invoice=draft,
+                ttl=APPROVAL_TTL,
+                limit=50
+            )
+        except TooManyApprovals:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many pending approvals."
+            )
 
-            for key in expired:
-                PENDING.pop(key, None)
-
-            # Restrict pending approvals for this local MVP.
-            if len(PENDING) >= 50:
-                raise HTTPException(
-                    status_code=429,
-                    detail="Too many pending approvals."
-                )
-
-            PENDING[approval_id] = {
-                "invoice": draft,
-                "expires": now + APPROVAL_TTL
-            }
 
         return {
             "ready": True,
@@ -255,42 +256,78 @@ def install_ai_routes(app, InvoiceInput, create_draft_invoice):
             }
         }
 
+
+    # Day 6 - Persistent invoice approval
     @app.post("/api/ai/approve", status_code=201)
     async def approve_invoice(request: ApprovalRequest):
-        with PENDING_LOCK:
-            pending = PENDING.pop(
-                request.approval_id, None
-            )
+        status, payload = store.claim(request.approval_id)
 
-        if not pending:
-            raise HTTPException(
-                status_code=404,
-                detail="Approval not found or already used."
-            )
-
-        if pending["expires"] < time.monotonic():
+        if status == "expired":
             raise HTTPException(
                 status_code=410,
                 detail="Approval expired. Prepare a new invoice."
             )
 
-        # Only the server-stored, validated invoice is used.
-        invoice = InvoiceInput.model_validate(
-            pending["invoice"]
-        )
+        if status != "claimed":
+            raise HTTPException(
+                status_code=404,
+                detail="Approval not found or already used."
+            )
 
-        # This is the only AI workflow step that calls PayPal.
-        # Approval is consumed first to prevent double-clicks.
+        try:
+            invoice = InvoiceInput.model_validate(payload)
 
-        return await create_draft_invoice(
-            invoice,
-            idempotency_key=request.approval_id
-        )
+            # Only the server-stored invoice is used.
+            result = await create_draft_invoice(
+                invoice,
+                idempotency_key=request.approval_id
+            )
 
+            invoice_id = (
+                result.get("invoice_id")
+                if isinstance(result, dict)
+                else None
+            )
+
+            if not invoice_id:
+                raise HTTPException(
+                    status_code=502,
+                    detail=(
+                        "Invoice result is uncertain. "
+                        "Check PayPal Sandbox before retrying."
+                    )
+                )
+
+            if not store.complete(
+                request.approval_id,
+                invoice_id
+            ):
+                raise HTTPException(
+                    status_code=500,
+                    detail="Could not finalize approval record."
+                )
+
+            return result
+
+        except Exception:
+            # Do not retry automatically after an
+            # uncertain PayPal response.
+            store.mark_uncertain(request.approval_id)
+            raise
+
+    # Day 6 - Persistent invoice cancellation
     @app.post("/api/ai/cancel")
     async def cancel_invoice(request: ApprovalRequest):
-        with PENDING_LOCK:
-            PENDING.pop(request.approval_id, None)
+        cancelled = store.cancel(request.approval_id)
+
+        if not cancelled:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Approval cannot be cancelled. "
+                    "It may have expired or already been used."
+                )
+            )
 
         return {
             "cancelled": True,
