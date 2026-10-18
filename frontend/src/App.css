@@ -117,3 +117,155 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Day 2 - Invoice Dashboard */
+
+.invoice-section {
+  margin-top: 35px;
+}
+
+.invoice-section > p {
+  color: #afc5d9;
+}
+
+.invoice-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 25px;
+}
+
+.invoice-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #c9def0;
+}
+
+.invoice-form input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid #35516f;
+  background: #07172d;
+  color: white;
+  font-size: 15px;
+}
+
+.invoice-form button {
+  grid-column: 1 / -1;
+}
+
+.invoice-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid #304861;
+  overflow-wrap: anywhere;
+}
+
+.invoice-row p {
+  color: #afc5d9;
+  font-size: 13px;
+}
+
+.invoice-error {
+  color: #ffbaba;
+}
+
+@media (max-width: 760px) {
+  .invoice-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Day 2 - Invoice Dashboard Styling */
+
+.invoice-section {
+  margin-top: 32px;
+}
+
+.invoice-section > p {
+  color: #afc5d9;
+  margin-bottom: 20px;
+}
+
+.invoice-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 25px;
+  text-align: left;
+}
+
+.invoice-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #c9def0;
+}
+
+.invoice-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 8px;
+  background: #07172d;
+  color: #ffffff;
+  border: 1px solid #35516f;
+  font-size: 15px;
+}
+
+.invoice-form input:focus {
+  outline: 2px solid #41b8ff;
+}
+
+.invoice-form button {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+}
+
+.invoice-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid #304861;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.invoice-row > div:last-child {
+  text-align: right;
+}
+
+.invoice-row p {
+  color: #afc5d9;
+  font-size: 13px;
+}
+
+.invoice-error {
+  color: #ffbaba;
+}
+
+@media (max-width: 760px) {
+  .invoice-form {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoice-row > div:last-child {
+    text-align: left;
+  }
+}
