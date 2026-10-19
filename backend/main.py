@@ -1,4 +1,5 @@
 
+import uuid
 import os
 from decimal import Decimal
 from pathlib import Path
@@ -6,7 +7,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
@@ -27,7 +28,7 @@ app.add_middleware(
         "http://127.0.0.1:5173"
     ],
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"]
+    allow_headers=["Content-Type", "Idempotency-Key"]
 )
 
 
@@ -107,7 +108,19 @@ async def check_paypal():
 
 
 @app.post("/api/invoices/draft", status_code=201)
-async def create_draft_invoice(data: InvoiceInput):
+
+async def create_draft_invoice(
+    data: InvoiceInput,
+    idempotency_key: str | None = Header(
+        default=None,
+        alias="Idempotency-Key",
+        min_length=16,
+        max_length=80,
+        pattern=r"^[A-Za-z0-9_-]+$"
+    )
+):
+    request_id = idempotency_key or uuid.uuid4().hex
+
     price = data.unit_price.quantize(Decimal("0.01"))
 
     payload = {
@@ -151,7 +164,8 @@ async def create_draft_invoice(data: InvoiceInput):
                 f"{PAYPAL_BASE}/v2/invoicing/invoices",
                 headers={
                     "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "PayPal-Request-Id": request_id
                 },
                 json=payload
             )

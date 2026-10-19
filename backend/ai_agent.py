@@ -1,4 +1,6 @@
 
+
+import re
 import json
 import os
 import secrets
@@ -54,6 +56,10 @@ def install_ai_routes(app, InvoiceInput, create_draft_invoice):
 
         instruction = (
             "Extract invoice details from the user's message. "
+            "Messages may contain earlier instructions and "
+            "later follow-up details. Combine them into one invoice. "
+            "When a later statement changes an earlier field, "
+            "use the latest explicitly provided value. "
             "Return only a JSON object containing exactly: "
             "customer_email, item_name, quantity, unit_price. "
             "Use null for missing or ambiguous values. "
@@ -141,11 +147,20 @@ def install_ai_routes(app, InvoiceInput, create_draft_invoice):
 
         # Prevent the AI from inventing an email recipient.
         email = extracted.get("customer_email")
-        if (
-            not isinstance(email, str)
-            or email.lower() not in request.message.lower()
-        ):
+        email_found = (
+            isinstance(email, str)
+            and re.search(
+                r"(?<![\w.+-])"
+                + re.escape(email)
+                + r"(?![\w.+-])",
+                request.message,
+                flags=re.IGNORECASE
+            ) is not None
+        )
+
+        if not email_found:
             extracted["customer_email"] = None
+
 
         missing = [
             field for field in required
@@ -153,12 +168,17 @@ def install_ai_routes(app, InvoiceInput, create_draft_invoice):
         ]
 
         if missing:
+            questions = {
+                "customer_email": "What is the Sandbox buyer email?",
+                "item_name": "What service should I invoice?",
+                "quantity": "How many units or hours?",
+                "unit_price": "What is the price per unit in USD?"
+            }
+
             return {
                 "ready": False,
-                "message": (
-                    "Please provide the missing details: "
-                    + ", ".join(missing)
-                    + "."
+                "message": " ".join(
+                    questions[field] for field in missing
                 ),
                 "preview": None,
                 "approval_id": None
@@ -261,7 +281,11 @@ def install_ai_routes(app, InvoiceInput, create_draft_invoice):
 
         # This is the only AI workflow step that calls PayPal.
         # Approval is consumed first to prevent double-clicks.
-        return await create_draft_invoice(invoice)
+
+        return await create_draft_invoice(
+            invoice,
+            idempotency_key=request.approval_id
+        )
 
     @app.post("/api/ai/cancel")
     async def cancel_invoice(request: ApprovalRequest):
