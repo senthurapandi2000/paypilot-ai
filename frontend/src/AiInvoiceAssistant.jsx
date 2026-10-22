@@ -157,7 +157,7 @@ export default function AiInvoiceAssistant({
     <section className="card ai-panel">
       <div className="ai-heading">
         <div>
-          <p className="eyebrow">DAY 3 · AI ASSISTANT</p>
+          <p className="eyebrow">AI ASSISTANT · LIVE SANDBOX</p>
           <h2>PayPilot AI Assistant</h2>
           <p className="ai-muted">
             Describe an invoice in natural language.

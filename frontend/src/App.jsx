@@ -311,8 +311,8 @@ export default function App() {
             <p>✓ React + FastAPI</p>
             <p>✓ PayPal Authentication</p>
             <p>✓ Invoice Listing API</p>
-            <p>◯ AI Agent Integration</p>
-            <p>◯ Cloud Deployment</p>
+            <p>✓ AI Agent Integration</p>
+            <p>✓ Cloud Deployment</p>
           </div>
         </div>
 
