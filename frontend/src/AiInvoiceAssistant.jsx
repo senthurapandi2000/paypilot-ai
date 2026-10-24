@@ -16,6 +16,7 @@ export default function AiInvoiceAssistant({
   const [preview, setPreview] = useState(null);
   const [approvalId, setApprovalId] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [cancellationUncertain, setCancellationUncertain] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -85,7 +86,8 @@ export default function AiInvoiceAssistant({
   }
 
   async function approveInvoice() {
-    if (!approvalId || busy) return;
+    if (!approvalId || busy || cancellationUncertain) return;
+
 
     const id = approvalId;
     setBusy(true);
@@ -138,20 +140,65 @@ export default function AiInvoiceAssistant({
 
     const id = approvalId;
 
-    setPreview(null);
-    setApprovalId(null);
-    setNotice("Preview discarded.");
+    setBusy(true);
+    setError("");
+    setNotice("");
 
     try {
-      await fetch(`${API}/api/ai/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json",  "X-Demo-Key": demoKey },
-        body: JSON.stringify({ approval_id: id })
-      });
-    } catch {
-      // Preview expires automatically on the backend.
+      const response = await fetch(
+        `${API}/api/ai/cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Demo-Key": demoKey
+          },
+          body: JSON.stringify({
+            approval_id: id
+          })
+        }
+      );
+
+      let data = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        // Handle an empty or invalid response.
+      }
+
+      if (!response.ok || data?.cancelled !== true) {
+        throw new Error(
+          typeof data?.detail === "string"
+            ? data.detail
+            : "The server did not confirm cancellation."
+        );
+      }
+
+      setPreview(null);
+      setApprovalId(null);
+      setCancellationUncertain(false);
+
+
+      setNotice(
+        "Approval cancelled successfully. Preview discarded."
+      );
+
+    } catch (err) {
+      setCancellationUncertain(true);
+
+      setError(
+        "Cancellation could not be confirmed. " +
+        "Do not approve this invoice until its status " +
+        "has been checked. " +
+        err.message
+      );
+
+    } finally {
+      setBusy(false);
     }
   }
+
 
   return (
     <section className="card ai-panel">
@@ -242,7 +289,8 @@ export default function AiInvoiceAssistant({
             <button
               type="button"
               onClick={approveInvoice}
-              disabled={busy}
+              disabled={busy || cancellationUncertain}
+
             >
               Approve & Create Draft
             </button>
