@@ -9,6 +9,7 @@ from approval_store_factory import make_approval_store
 from decimal import Decimal
 
 import httpx
+from gemini_retry import generate_with_retry
 from fastapi import HTTPException
 from pydantic import BaseModel, EmailStr, Field, ValidationError
 
@@ -42,7 +43,8 @@ def install_ai_routes(
     app,
     InvoiceInput,
     create_draft_invoice,
-    approval_store=None
+    approval_store=None,
+    invoice_reviewer=None
 ):
     store = (
         approval_store
@@ -61,7 +63,7 @@ def install_ai_routes(
             )
 
         model = os.getenv(
-            "GEMINI_MODEL", "gemini-3.5-flash-lite"
+            "GEMINI_MODEL", "gemini-3.1-flash-lite"
         ).strip()
 
         instruction = (
@@ -103,14 +105,15 @@ def install_ai_routes(
 
         try:
             async with httpx.AsyncClient(timeout=45) as client:
-                response = await client.post(
+                response = await generate_with_retry(
+                    client,
                     "https://generativelanguage.googleapis.com"
                     f"/v1beta/models/{model}:generateContent",
                     headers={
                         "x-goog-api-key": api_key,
                         "Content-Type": "application/json"
                     },
-                    json=body
+                    body=body
                 )
         except httpx.RequestError:
             raise HTTPException(
@@ -125,11 +128,23 @@ def install_ai_routes(
             )
 
         if response.status_code != 200:
+            try:
+                error = response.json().get("error", {})
+                provider_status = error.get("status", "unknown")
+            except (ValueError, AttributeError, TypeError):
+                provider_status = "unknown"
+
+            print(
+                f"Gemini error: HTTP {response.status_code}, "
+                f"status={provider_status}, model={model}",
+                flush=True
+            )
+
             raise HTTPException(
                 status_code=502,
                 detail=(
-                    "Gemini request failed. Check the API key, "
-                    "model name and free-tier access."
+                    "Gemini generation failed. "
+                    "Check the backend logs for the status."
                 )
             )
 
@@ -243,6 +258,25 @@ def install_ai_routes(
             )
 
 
+        # Optional Invoice Intelligence review
+        review = None
+
+        if invoice_reviewer is not None:
+            try:
+                review = await invoice_reviewer(draft)
+            except Exception:
+                review = {
+                    "status": "unavailable",
+                    "review_recommended": None,
+                    "warnings": [],
+                    "examined": 0,
+                    "skipped": 0,
+                    "message": (
+                        "Invoice history review could not "
+                        "be completed. Review manually."
+                    ),
+                }
+
         return {
             "ready": True,
             "message": (
@@ -254,7 +288,8 @@ def install_ai_routes(
                 **draft,
                 "currency": "USD",
                 "total": str(total)
-            }
+            },
+            "review": review
         }
 
 
