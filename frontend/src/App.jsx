@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 import AiInvoiceAssistant from "./AiInvoiceAssistant";
@@ -9,6 +9,7 @@ import AiInvoiceAssistant from "./AiInvoiceAssistant";
 const API = "http://127.0.0.1:8000";
 
 export default function App() {
+  const manualRequestId = useRef(null);
   const [backend, setBackend] = useState("Checking...");
   const [paypal, setPaypal] = useState("Not tested");
   const [message, setMessage] = useState("");
@@ -60,6 +61,14 @@ export default function App() {
 
   async function createInvoice(e) {
     e.preventDefault();
+
+    if (loading) return;
+
+    const requestId =
+      manualRequestId.current || crypto.randomUUID();
+
+    manualRequestId.current = requestId;
+
     setLoading(true);
     setError("");
     setMessage("");
@@ -67,7 +76,7 @@ export default function App() {
     try {
       const response = await fetch(`${API}/api/invoices/draft`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": requestId},
         body: JSON.stringify({
           ...form,
           quantity: Number(form.quantity)
@@ -85,6 +94,9 @@ export default function App() {
       }
 
       setMessage(`Draft created: ${data.invoice_id}`);
+
+      manualRequestId.current = null;
+
       await loadInvoices();
     } catch (err) {
       setError(
@@ -96,6 +108,9 @@ export default function App() {
   }
 
   function updateField(e) {
+
+    manualRequestId.current = null;
+
     setForm({
       ...form,
       [e.target.name]: e.target.value
@@ -156,7 +171,7 @@ export default function App() {
           </div>
         </div>
 
-        
+
         <AiInvoiceAssistant onCreated={loadInvoices} />
 
         <section className="card invoice-section">
