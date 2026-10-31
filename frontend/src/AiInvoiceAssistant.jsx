@@ -2,9 +2,14 @@
 import { useState } from "react";
 import "./AiInvoiceAssistant.css";
 
-const API = "http://127.0.0.1:8000";
+const API =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8000";
 
-export default function AiInvoiceAssistant({ onCreated }) {
+export default function AiInvoiceAssistant({
+    onCreated,
+    demoKey
+})   {
   const [message, setMessage] = useState("");
   const [draftContext, setDraftContext] = useState("");
   const [conversation, setConversation] = useState([]);
@@ -48,7 +53,7 @@ export default function AiInvoiceAssistant({ onCreated }) {
     try {
       const response = await fetch(`${API}/api/ai/prepare`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Demo-Key": demoKey },
         body: JSON.stringify({ message: instruction })
       });
 

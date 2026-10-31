@@ -1,9 +1,13 @@
 
+import secrets
+from fastapi import Request
+from fastapi.responses import JSONResponse
 import uuid
 import os
 from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlsplit
+
 
 import httpx
 from dotenv import load_dotenv
@@ -21,15 +25,62 @@ app = FastAPI(
     version="0.2.0"
 )
 
+
+# Day 5 - Restricted sandbox demo access
+@app.middleware("http")
+async def require_demo_access(request: Request, call_next):
+    path = request.url.path
+
+    if path.startswith("/api/") and path != "/api/health":
+        expected = os.getenv(
+            "PAYPILOT_DEMO_KEY", ""
+        ).strip()
+
+        if not expected:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "detail": "Demo access is not configured."
+                }
+            )
+
+        provided = request.headers.get("X-Demo-Key", "")
+
+        if not secrets.compare_digest(provided, expected):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail": "Unauthorized demo request."
+                }
+            )
+
+    return await call_next(request)
+
+
+
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+]
+
+public_origin = os.getenv(
+    "FRONTEND_ORIGIN", ""
+).strip().rstrip("/")
+
+if public_origin:
+    allowed_origins.append(public_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ],
+    allow_origins=allowed_origins,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Idempotency-Key"]
+    allow_headers=[
+        "Content-Type",
+        "Idempotency-Key",
+        "X-Demo-Key"
+    ]
 )
+
 
 
 class InvoiceInput(BaseModel):
@@ -84,6 +135,15 @@ def home():
 @app.get("/api/health")
 def health():
     return {"status": "online"}
+
+
+@app.get("/api/demo/verify")
+def verify_demo_access():
+    return {
+        "authorized": True,
+        "message": "Sandbox demo access verified."
+    }
+
 
 
 @app.get("/api/paypal/check")
