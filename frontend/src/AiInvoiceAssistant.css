@@ -1,0 +1,136 @@
+
+.ai-panel {
+  margin-top: 35px;
+}
+
+.ai-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 25px;
+}
+
+.ai-chip {
+  padding: 9px 14px;
+  background: #123c5c;
+  border-radius: 25px;
+  color: #69c8ff;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.ai-muted {
+  color: #a6bed2;
+  line-height: 1.6;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.ai-chat {
+  background: #091e35;
+  border: 1px solid #284565;
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 180px;
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.ai-bubble {
+  padding: 13px 17px;
+  border-radius: 14px;
+  max-width: 85%;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.ai-bubble.assistant {
+  align-self: flex-start;
+  background: #1b3c5b;
+}
+
+.ai-bubble.user {
+  align-self: flex-end;
+  background: #135eaa;
+}
+
+.ai-entry {
+  margin-top: 20px;
+}
+
+.ai-entry textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 16px;
+  border: 1px solid #35516f;
+  border-radius: 10px;
+  background: #07172d;
+  color: white;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.ai-entry button {
+  margin-top: 12px;
+}
+
+.ai-preview {
+  margin-top: 25px;
+  padding: 22px;
+  background: #0c3047;
+  border: 1px solid #3987b0;
+  border-radius: 12px;
+}
+
+.ai-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid #35516f;
+  overflow-wrap: anywhere;
+}
+
+.ai-detail span {
+  color: #b4cadd;
+}
+
+.ai-detail strong {
+  text-align: right;
+}
+
+.ai-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.ai-actions button {
+  margin-top: 0;
+}
+
+.ai-actions .ai-cancel {
+  background: #41546b;
+}
+
+.ai-success {
+  color: #70dfb8;
+  margin-top: 18px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .ai-heading {
+    flex-direction: column;
+  }
+
+  .ai-actions {
+    grid-template-columns: 1fr;
+  }
+}

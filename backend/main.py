@@ -296,3 +296,13 @@ async def list_invoices():
         "count": len(invoices),
         "invoices": invoices
     }
+
+
+# Day 3 - AI invoice preparation and approval
+from ai_agent import install_ai_routes
+
+install_ai_routes(
+    app,
+    InvoiceInput,
+    create_draft_invoice
+)
