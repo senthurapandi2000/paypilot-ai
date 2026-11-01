@@ -98,7 +98,7 @@ export default function AiInvoiceAssistant({
     try {
       const response = await fetch(`${API}/api/ai/approve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Demo-Key": demoKey},
         body: JSON.stringify({ approval_id: id })
       });
 
@@ -145,7 +145,7 @@ export default function AiInvoiceAssistant({
     try {
       await fetch(`${API}/api/ai/cancel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",  "X-Demo-Key": demoKey },
         body: JSON.stringify({ approval_id: id })
       });
     } catch {

@@ -93,14 +93,17 @@ export default function App() {
 
   useEffect(() => {
     fetch(`${API}/api/health`)
-      .then((r) => r.json())
+      .then((response) => response.json())
       .then((data) => setBackend(data.status))
       .catch(() => setBackend("Offline"));
 
-    loadInvoices().catch(() => {
-      setError("Could not load existing invoices.");
+    if (demoKey) {
+      loadInvoices().catch(() => {
+        setError("Could not load existing invoices.");
     });
-  }, [demoKey]);
+
+  }
+}, [demoKey]);
 
   async function testPayPal() {
     try {

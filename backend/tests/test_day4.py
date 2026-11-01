@@ -7,12 +7,15 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import ai_agent
-from ai_agent import install_ai_routes, PENDING, PENDING_LOCK
+import sqlite3
+from approval_store import ApprovalStore
+from ai_agent import install_ai_routes
+
 from main import InvoiceInput
 
 
 @pytest.fixture
-def test_app(monkeypatch):
+def test_app(monkeypatch,tmp_path):
     monkeypatch.setenv("GEMINI_API_KEY", "test-only-key")
 
     state = {
@@ -67,22 +70,26 @@ def test_app(monkeypatch):
             "status": "DRAFT"
         }
 
-    with PENDING_LOCK:
-        PENDING.clear()
+
+    store = ApprovalStore(
+        tmp_path / "test_approvals.sqlite3"
+    )
+
+    state["store"] = store
 
     app = FastAPI()
+
 
     install_ai_routes(
         app,
         InvoiceInput,
-        fake_create_invoice
+        fake_create_invoice,
+        approval_store=store
     )
 
     with TestClient(app) as client:
         yield client, state
 
-    with PENDING_LOCK:
-        PENDING.clear()
 
 
 def prepare(client):
@@ -172,8 +179,17 @@ def test_expired_approval(test_app):
 
     approval_id = prepare(client).json()["approval_id"]
 
-    with PENDING_LOCK:
-        PENDING[approval_id]["expires"] = -1
+
+    with sqlite3.connect(state["store"].path) as conn:
+        conn.execute(
+            """
+            UPDATE approvals
+            SET expires_at = 0
+            WHERE approval_id = ?
+            """,
+            (approval_id,)
+        )
+
 
     approved = client.post(
         "/api/ai/approve",
