@@ -1,16 +1,52 @@
-# React + Vite
+﻿# PayPilot AI — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React and Vite frontend for the PayPilot AI
+conversational invoice assistant.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- AI-powered invoice preparation
+- Invoice preview with human approval
+- Advisory duplicate and unusual-amount warnings
+- PayPal Sandbox invoice creation
+- Invoice history dashboard
+- Demo passphrase access
 
-## React Compiler
+## Technology
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- Vite
+- JavaScript
+- CSS
+- FastAPI backend integration
 
-## Expanding the ESLint configuration
+## Local Setup
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Install dependencies:
+
+   npm install
+
+2. Copy .env.example to .env.
+
+3. Set VITE_API_BASE_URL to your backend URL.
+
+4. Start the development server:
+
+   npm run dev
+
+## Validation
+
+Run:
+
+    npm run lint
+    npm run build
+
+## Demo
+
+https://paypilot-ai-icx7.onrender.com
+
+This application uses PayPal Sandbox only.
+No real payments are processed.
+
+See the repository root README for architecture,
+backend setup, evaluation results, and limitations.
