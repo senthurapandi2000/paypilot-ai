@@ -1,36 +1,23 @@
 
 import argparse
 import asyncio
-import json
-import sqlite3
 from decimal import Decimal
-
+from approval_store_factory import make_approval_store
 import httpx
-
-from approval_store import ApprovalStore
 from main import PAYPAL_BASE, get_paypal_token
 
 
 async def check_invoice(approval_id):
-    store = ApprovalStore()
+    store = make_approval_store()
 
-    # Read the original validated invoice from SQLite.
-    with sqlite3.connect(store.path) as conn:
-        row = conn.execute(
-            """
-            SELECT invoice_json, status
-            FROM approvals
-            WHERE approval_id = ?
-            """,
-            (approval_id,)
-        ).fetchone()
+    record = store.get_invoice(approval_id)
 
-    if row is None:
+    if record is None:
         print("Approval not found.")
         return
 
-    invoice = json.loads(row[0])
-    status = row[1]
+    invoice = record["invoice"]
+    status = record["status"]
 
     reference = f"PAYPILOT-{approval_id}"
     email = invoice["customer_email"]
