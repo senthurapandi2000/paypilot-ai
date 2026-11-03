@@ -1,4 +1,7 @@
 
+from functools import lru_cache
+from starlette.concurrency import run_in_threadpool
+from postgres_daily_quota import PostgresDailyQuota
 from rate_limit import SlidingWindowLimiter
 import secrets
 from fastapi import Request
@@ -29,6 +32,10 @@ app = FastAPI(
 
 # Day 7 - API rate limiting
 limiter = SlidingWindowLimiter()
+@lru_cache(maxsize=1)
+def get_daily_quota():
+    return PostgresDailyQuota()
+
 
 
 # Day 5 - Restricted sandbox demo access
@@ -119,6 +126,60 @@ async def require_demo_access(request: Request, call_next):
             window_seconds=60
         ):
             return rate_limit_response()
+
+
+    # Day 10 - Shared PostgreSQL daily quotas.
+    # Disabled unless explicitly enabled.
+    if (
+        os.getenv("ENABLE_DAILY_QUOTAS", "0") == "1"
+        and request.method == "POST"
+    ):
+        quota_name = None
+        daily_limit = None
+
+        if path == "/api/ai/prepare":
+            quota_name = "gemini_prepare"
+            daily_limit = 50
+
+        elif path in (
+            "/api/ai/approve",
+            "/api/invoices/draft"
+        ):
+            quota_name = "invoice_create"
+            daily_limit = 15
+
+        if quota_name is not None:
+            try:
+                quota = await run_in_threadpool(get_daily_quota)
+
+
+                permitted = await run_in_threadpool(
+                    quota.allow,
+                    quota_name,
+                    daily_limit
+                )
+
+            except Exception:
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "detail": (
+                            "Daily quota service is unavailable. "
+                            "Please try again later."
+                        )
+                    }
+                )
+
+            if not permitted:
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "detail": (
+                            "Daily demo quota reached. "
+                            "Try again after midnight UTC."
+                        )
+                    }
+                )
 
     return await call_next(request)
 
@@ -335,7 +396,7 @@ async def create_draft_invoice(
         raise HTTPException(status_code=502, detail=detail)
 
     # PayPal can return an invoice link instead of an ID.
-    
+
     invoice_id = result.get("id")
 
     if not invoice_id:
