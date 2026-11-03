@@ -106,7 +106,7 @@ async def check_invoice(approval_id):
         print(f"Invoice ID: {match.get('id')}")
         print(f"PayPal status: {match.get('status')}")
         print("Verify invoice details in PayPal Sandbox.")
-        print("SQLite status was NOT modified.")
+        print("Approval status was NOT modified (read-only check).")
 
     elif len(matches) > 1:
         print("Multiple matching invoices found.")
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "approval_id",
-        help="Existing SQLite approval ID"
+        help="Existing approval ID (SQLite or PostgreSQL)"
     )
 
     args = parser.parse_args()
