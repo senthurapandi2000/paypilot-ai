@@ -92,18 +92,36 @@ export default function App() {
   }
 
   useEffect(() => {
+    // Check backend health.
     fetch(`${API}/api/health`)
       .then((response) => response.json())
       .then((data) => setBackend(data.status))
       .catch(() => setBackend("Offline"));
 
-    if (demoKey) {
-      loadInvoices().catch(() => {
-        setError("Could not load existing invoices.");
-    });
+    // Load invoices after unlocking the demo.
+    if (!demoKey) return;
 
-  }
-}, [demoKey]);
+    fetch(`${API}/api/invoices/list`, {
+      headers: {
+        "X-Demo-Key": demoKey
+      }
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load invoices");
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        setInvoices(data.invoices || []);
+      })
+      .catch(() => {
+        setError("Could not load existing invoices.");
+      });
+
+  }, [demoKey]);
+
 
   async function testPayPal() {
     try {
