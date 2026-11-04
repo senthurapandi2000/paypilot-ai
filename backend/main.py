@@ -1,4 +1,5 @@
 
+from rate_limit import SlidingWindowLimiter
 import secrets
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -26,35 +27,101 @@ app = FastAPI(
 )
 
 
+# Day 7 - API rate limiting
+limiter = SlidingWindowLimiter()
+
+
 # Day 5 - Restricted sandbox demo access
+
 @app.middleware("http")
 async def require_demo_access(request: Request, call_next):
     path = request.url.path
 
-    if path.startswith("/api/") and path != "/api/health":
-        expected = os.getenv(
-            "PAYPILOT_DEMO_KEY", ""
-        ).strip()
+    # Keep health checks public.
+    if not path.startswith("/api/") or path == "/api/health":
+        return await call_next(request)
 
-        if not expected:
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "detail": "Demo access is not configured."
-                }
-            )
+    client_ip = (
+        request.client.host
+        if request.client
+        else "unknown"
+    )
 
-        provided = request.headers.get("X-Demo-Key", "")
+    def rate_limit_response():
+        return JSONResponse(
+            status_code=429,
+            content={
+                "detail": "Too many requests. Try again later."
+            },
+            headers={"Retry-After": "60"}
+        )
 
-        if not secrets.compare_digest(provided, expected):
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "detail": "Unauthorized demo request."
-                }
-            )
+    # General API limit.
+    if not limiter.allow(
+        f"all:{client_ip}",
+        limit=60,
+        window_seconds=60
+    ):
+        return rate_limit_response()
+
+    expected = os.getenv(
+        "PAYPILOT_DEMO_KEY", ""
+    ).strip()
+
+    if not expected:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "Demo access is not configured."
+            }
+        )
+
+    # Protect the demo passphrase verification endpoint.
+    if path == "/api/demo/verify":
+        if not limiter.allow(
+            f"verify:{client_ip}",
+            limit=10,
+            window_seconds=60
+        ):
+            return rate_limit_response()
+
+    provided = request.headers.get(
+        "X-Demo-Key", ""
+    )
+
+    if not secrets.compare_digest(
+        provided, expected
+    ):
+        return JSONResponse(
+            status_code=401,
+            content={
+                "detail": "Unauthorized demo request."
+            }
+        )
+
+    # Protect Gemini API usage.
+    if path == "/api/ai/prepare":
+        if not limiter.allow(
+            f"ai:{client_ip}",
+            limit=10,
+            window_seconds=60
+        ):
+            return rate_limit_response()
+
+    # Protect invoice creation.
+    if path in (
+        "/api/ai/approve",
+        "/api/invoices/draft"
+    ):
+        if not limiter.allow(
+            f"invoice:{client_ip}",
+            limit=6,
+            window_seconds=60
+        ):
+            return rate_limit_response()
 
     return await call_next(request)
+
 
 
 
@@ -186,6 +253,7 @@ async def create_draft_invoice(
     payload = {
         "detail": {
             "currency_code": "USD",
+            "reference": f"PAYPILOT-{request_id}",
             "note": "PayPilot AI Sandbox demonstration.",
             "payment_term": {
                 "term_type": "DUE_ON_RECEIPT"
