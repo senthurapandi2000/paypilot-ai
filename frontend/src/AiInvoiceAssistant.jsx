@@ -14,6 +14,7 @@ export default function AiInvoiceAssistant({
   const [draftContext, setDraftContext] = useState("");
   const [conversation, setConversation] = useState([]);
   const [preview, setPreview] = useState(null);
+  const [review, setReview] = useState(null);
   const [approvalId, setApprovalId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [cancellationUncertain, setCancellationUncertain] = useState(false);
@@ -49,6 +50,7 @@ export default function AiInvoiceAssistant({
     setError("");
     setNotice("");
     setPreview(null);
+    setReview(null);
     addMessage("user", typed);
 
     try {
@@ -74,6 +76,7 @@ export default function AiInvoiceAssistant({
       if (data.ready) {
         setDraftContext("");
         setPreview(data.preview);
+        setReview(data.review ?? null);
         setApprovalId(data.approval_id);
       } else {
         setDraftContext(instruction);
@@ -96,6 +99,7 @@ export default function AiInvoiceAssistant({
     // Disable further approvals immediately.
     setApprovalId(null);
     setPreview(null);
+    setReview(null);
 
     try {
       const response = await fetch(`${API}/api/ai/approve`, {
@@ -177,6 +181,7 @@ export default function AiInvoiceAssistant({
 
       setPreview(null);
       setApprovalId(null);
+      setReview(null);
       setCancellationUncertain(false);
 
 
@@ -284,6 +289,52 @@ export default function AiInvoiceAssistant({
             <span>Total</span>
             <strong>${preview.total} USD</strong>
           </div>
+
+
+          {review && (
+            <div className="ai-risk-review" role="status"
+              style={{
+                padding: "16px",
+                marginTop: "16px",
+                marginBottom: "16px",
+                border: "1px solid #64748b",
+                borderRadius: "10px"
+              }}
+            >
+              <h4>Invoice Intelligence</h4>
+
+              {review.status === "complete" &&
+                review.warnings.length === 0 && (
+                  <p>No issues detected in checked history.</p>
+                )}
+
+              {review.warnings.map((warning, index) => (
+                <p key={`${warning.code}-${index}`}>
+                  Warning: {warning.message}
+                </p>
+              ))}
+
+              {review.status === "partial" && (
+                <p>Partial review: not all invoices were checked.</p>
+              )}
+
+              {review.status === "unavailable" && (
+                <p>Review unavailable. Check history manually.</p>
+              )}
+
+              {review.status !== "unavailable" && (
+                <p className="ai-muted">
+                  Historical invoices examined: {review.examined}
+                  {review.skipped > 0 &&
+                    ` (${review.skipped} skipped)`}
+                </p>
+              )}
+
+              <p className="ai-muted">
+                Advisory only. Review details before approval.
+              </p>
+            </div>
+          )}
 
           <div className="ai-actions">
             <button

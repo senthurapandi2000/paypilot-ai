@@ -14,6 +14,12 @@ REFERENCE = f"PAYPILOT-{APPROVAL_ID}"
 
 @pytest.fixture
 def recovery_setup(tmp_path, monkeypatch):
+
+    monkeypatch.setenv(
+        "APPROVAL_STORE_BACKEND",
+        "sqlite"
+    )
+
     monkeypatch.setenv(
         "APPROVAL_DB_PATH",
         str(tmp_path / "recovery.sqlite3")

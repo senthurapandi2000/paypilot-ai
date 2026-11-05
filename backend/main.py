@@ -501,11 +501,26 @@ async def list_invoices():
     }
 
 
-# Day 3 - AI invoice preparation and approval
+
+# AI invoice preparation, approval and optional risk review
 from ai_agent import install_ai_routes
+
+invoice_reviewer = None
+
+if os.getenv("ENABLE_INVOICE_INTELLIGENCE", "0") == "1":
+    from invoice_review_service import review_draft_invoice
+
+    async def invoice_reviewer(draft):
+        return await review_draft_invoice(
+            draft=draft,
+            get_token=get_paypal_token,
+            base_url=PAYPAL_BASE
+        )
+
 
 install_ai_routes(
     app,
     InvoiceInput,
-    create_draft_invoice
+    create_draft_invoice,
+    invoice_reviewer=invoice_reviewer
 )
