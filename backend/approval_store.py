@@ -203,3 +203,24 @@ class ApprovalStore:
             ).fetchone()
 
             return dict(row) if row else None
+
+
+
+    def get_invoice(self, approval_id):
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT invoice_json, status
+                FROM approvals
+                WHERE approval_id = ?
+                """,
+                (approval_id,)
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return {
+            "invoice": json.loads(row["invoice_json"]),
+            "status": row["status"]
+        }

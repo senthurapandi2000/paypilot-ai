@@ -4,7 +4,8 @@ import re
 import json
 import os
 import secrets
-from approval_store import ApprovalStore, TooManyApprovals
+from approval_store import TooManyApprovals
+from approval_store_factory import make_approval_store
 from decimal import Decimal
 
 import httpx
@@ -46,7 +47,7 @@ def install_ai_routes(
     store = (
         approval_store
         if approval_store is not None
-        else ApprovalStore()
+        else make_approval_store()
     )
 
     @app.post("/api/ai/prepare")
