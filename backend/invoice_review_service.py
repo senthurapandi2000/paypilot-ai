@@ -18,6 +18,7 @@ def unavailable_review():
         "status": "unavailable",
         "review_recommended": None,
         "warnings": [],
+        "amount_baseline": None,
         "examined": 0,
         "skipped": 0,
         "message": (
@@ -91,6 +92,7 @@ async def review_draft_invoice(
         "status": status,
         "review_recommended": recommendation,
         "warnings": report["warnings"],
+        "amount_baseline": report["amount_baseline"],
         "examined": history["examined"],
         "skipped": history["skipped"],
         "message": message,

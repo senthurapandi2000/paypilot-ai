@@ -134,7 +134,17 @@ def review_invoice(draft, history, now=None):
                 )
             })
 
+    sample_size = len(historical_totals)
+
     return {
         "review_recommended": bool(warnings),
-        "warnings": warnings
+        "warnings": warnings,
+        "amount_baseline": {
+            "status": (
+                "ready" if sample_size >= 5
+                else "insufficient"
+            ),
+            "sample_size": sample_size,
+            "minimum_sample_size": 5,
+        },
     }

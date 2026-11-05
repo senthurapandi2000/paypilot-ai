@@ -100,3 +100,24 @@ def test_complete_empty_history_has_no_warnings():
     assert result["status"] == "complete"
     assert result["review_recommended"] is False
     assert result["warnings"] == []
+
+
+
+def test_complete_history_exposes_amount_baseline():
+    async def reader(client, token, url, max_invoices):
+        return {
+            "coverage": "complete",
+            "examined": 0,
+            "skipped": 0,
+            "invoices": [],
+        }
+
+    result = run_review(reader)
+
+    assert result["status"] == "complete"
+    assert result["amount_baseline"] == {
+        "status": "insufficient",
+        "sample_size": 0,
+        "minimum_sample_size": 5,
+    }
+    assert result["review_recommended"] is False

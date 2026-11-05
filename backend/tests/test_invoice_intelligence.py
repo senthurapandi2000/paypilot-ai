@@ -151,3 +151,46 @@ def test_same_total_different_quantity_is_not_duplicate():
     )
 
     assert result["review_recommended"] is False
+
+
+
+def test_amount_baseline_reports_limited_history():
+    for count in (0, 4):
+        history = [
+            previous_invoice(
+                days_ago=i + 31,
+                unit_price="20.00",
+            )
+            for i in range(count)
+        ]
+
+        result = review_invoice(DRAFT, history, now=NOW)
+
+        assert result["amount_baseline"] == {
+            "status": "insufficient",
+            "sample_size": count,
+            "minimum_sample_size": 5,
+        }
+
+
+def test_amount_baseline_reports_ready_with_five_records():
+    history = [
+        previous_invoice(
+            days_ago=i + 31,
+            unit_price="20.00",
+        )
+        for i in range(5)
+    ]
+
+    result = review_invoice(DRAFT, history, now=NOW)
+
+    assert result["amount_baseline"] == {
+        "status": "ready",
+        "sample_size": 5,
+        "minimum_sample_size": 5,
+    }
+
+    assert any(
+        warning["code"] == "unusual_amount"
+        for warning in result["warnings"]
+    )

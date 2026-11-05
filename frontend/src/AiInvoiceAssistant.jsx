@@ -304,9 +304,25 @@ export default function AiInvoiceAssistant({
               <h4>Invoice Intelligence</h4>
 
               {review.status === "complete" &&
-                review.warnings.length === 0 && (
-                  <p>No issues detected in checked history.</p>
+                review.warnings.length === 0 &&
+                review.amount_baseline?.status === "ready" && (
+                  <p>No duplicate or unusual-amount flags found in checked history.</p>
                 )}
+
+              {review.status === "complete" &&
+                review.warnings.length === 0 &&
+                review.amount_baseline?.status === "insufficient" && (
+                  <p>No duplicate warning found in checked history.</p>
+                )}
+
+              {review.amount_baseline?.status === "insufficient" && (
+                <p>
+                  Amount anomaly check inconclusive: only{" "}
+                  {review.amount_baseline.sample_size} comparable
+                  historical invoices found (minimum{" "}
+                  {review.amount_baseline.minimum_sample_size}).
+                </p>
+              )}
 
               {review.warnings.map((warning, index) => (
                 <p key={`${warning.code}-${index}`}>
