@@ -194,3 +194,86 @@ def test_amount_baseline_reports_ready_with_five_records():
         warning["code"] == "unusual_amount"
         for warning in result["warnings"]
     )
+
+
+
+def billing_context(previous_start, previous_end):
+    return {
+        "proposed": {
+            "start_date": "2026-11-01",
+            "end_date": "2026-11-30",
+        },
+        "historical": {
+            "INV2-TEST": {
+                "start_date": previous_start,
+                "end_date": previous_end,
+            }
+        },
+    }
+
+
+def test_verified_distinct_periods():
+    result = review_invoice(
+        DRAFT,
+        [previous_invoice()],
+        now=NOW,
+        verified_billing_context=billing_context(
+            "2026-10-01", "2026-10-31"
+        ),
+    )
+
+    assert result["review_recommended"] is False
+
+
+def test_verified_overlapping_periods():
+    result = review_invoice(
+        DRAFT,
+        [previous_invoice()],
+        now=NOW,
+        verified_billing_context=billing_context(
+            "2026-11-01", "2026-11-15"
+        ),
+    )
+
+    assert result["warnings"][0]["code"] == (
+        "possible_duplicate"
+    )
+
+
+def test_missing_verified_period_keeps_warning():
+    result = review_invoice(
+        DRAFT,
+        [previous_invoice()],
+        now=NOW,
+        verified_billing_context={
+            "proposed": {
+                "start_date": "2026-11-01",
+                "end_date": "2026-11-30",
+            },
+            "historical": {},
+        },
+    )
+
+    assert result["warnings"][0]["code"] == (
+        "possible_duplicate"
+    )
+
+
+def test_unverified_draft_period_keeps_warning():
+    proposed = {
+        **DRAFT,
+        "billing_period": {
+            "start_date": "2026-11-01",
+            "end_date": "2026-11-30",
+        },
+    }
+
+    result = review_invoice(
+        proposed,
+        [previous_invoice()],
+        now=NOW,
+    )
+
+    assert result["warnings"][0]["code"] == (
+        "possible_duplicate"
+    )

@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from statistics import median
 
+from billing_periods import compare_billing_periods
+
 
 IGNORED_STATUSES = {"CANCELLED", "REFUNDED"}
 
@@ -27,7 +29,10 @@ def _normalized_service(value):
     )
 
 
-def review_invoice(draft, history, now=None):
+def review_invoice(
+    draft, history, now=None, *,
+    verified_billing_context=None
+):
     """
     Review a proposed invoice against historical invoices.
 
@@ -100,9 +105,29 @@ def review_invoice(draft, history, now=None):
             and old_total == total
             and int(previous["quantity"]) == int(draft["quantity"])
         ):
-            recent_matches.append(
-                previous.get("invoice_id")
-            )
+            period_comparison = "unknown"
+
+            if isinstance(verified_billing_context, dict):
+                historical = verified_billing_context.get(
+                    "historical"
+                )
+
+                if isinstance(historical, dict):
+                    invoice_id = previous.get("invoice_id")
+
+                    if isinstance(invoice_id, str) and invoice_id:
+                        period_comparison = compare_billing_periods(
+                            verified_billing_context.get("proposed"),
+                            historical.get(invoice_id),
+                        )
+
+            # Only trusted, distinct billing periods can
+            # exclude an otherwise matching duplicate.
+            # Missing or invalid context stays flagged.
+            if period_comparison != "distinct":
+                recent_matches.append(
+                    previous.get("invoice_id")
+                )
 
     warnings = []
 
