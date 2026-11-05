@@ -112,3 +112,42 @@ def test_insufficient_history_no_anomaly():
 
     assert result["review_recommended"] is False
     assert result["warnings"] == []
+
+
+
+def test_service_punctuation_and_hyphenation():
+    proposed = {
+        **DRAFT,
+        "item_name": "Website maintenance"
+    }
+
+    for previous_name in (
+        "Website maintenance.",
+        "Website-maintenance"
+    ):
+        result = review_invoice(
+            proposed,
+            [previous_invoice(item_name=previous_name)],
+            now=NOW
+        )
+
+        assert any(
+            warning["code"] == "possible_duplicate"
+            for warning in result["warnings"]
+        )
+
+
+def test_same_total_different_quantity_is_not_duplicate():
+    proposed = {
+        **DRAFT,
+        "quantity": 2,
+        "unit_price": "50.00"
+    }
+
+    result = review_invoice(
+        proposed,
+        [previous_invoice()],
+        now=NOW
+    )
+
+    assert result["review_recommended"] is False
