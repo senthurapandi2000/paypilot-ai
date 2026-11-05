@@ -50,12 +50,17 @@ def attest(reviewer, subject_type, subject_id, start, end):
         start_date=start,
         end_date=end,
         evidence_reference="TEST-EVIDENCE-001",
+        invoice=(
+            DRAFT
+            if subject_type == "pending_approval"
+            else HISTORY[0]
+        ),
     )
 
 
 def review(store):
     context = load_billing_context(
-        store, "APPROVAL-001", HISTORY
+        store, "APPROVAL-001", DRAFT, HISTORY
     )
 
     return review_invoice(
@@ -114,7 +119,7 @@ def test_missing_proposed_evidence_preserves_warning(tmp_path):
     )
 
     assert load_billing_context(
-        store, "APPROVAL-001", HISTORY
+        store, "APPROVAL-001", DRAFT, HISTORY
     ) is None
 
     assert review(store)["warnings"][0]["code"] == (
@@ -131,7 +136,7 @@ def test_missing_historical_evidence_preserves_warning(tmp_path):
     )
 
     context = load_billing_context(
-        store, "APPROVAL-001", HISTORY
+        store, "APPROVAL-001", DRAFT, HISTORY
     )
 
     assert context["historical"] == {}
@@ -159,7 +164,120 @@ def test_inconsistent_subject_record_is_rejected():
             }
 
     context = load_billing_context(
-        MismatchedStore(), "APPROVAL-001", HISTORY
+        MismatchedStore(), "APPROVAL-001", DRAFT, HISTORY
     )
 
     assert context is None
+
+
+
+def test_changed_proposed_invoice_keeps_warning(tmp_path):
+    store, reviewer = setup_store(tmp_path)
+
+    attest(
+        reviewer, "pending_approval", "APPROVAL-001",
+        "2026-11-01", "2026-11-30"
+    )
+    attest(
+        reviewer, "paypal_invoice", "INV2-TEST",
+        "2026-10-01", "2026-10-31"
+    )
+
+    changed = {
+        **DRAFT,
+        "item_name": "WEBSITE MAINTENANCE",
+    }
+
+    context = load_billing_context(
+        store, "APPROVAL-001", changed, HISTORY
+    )
+
+    assert context is None
+
+    result = review_invoice(
+        changed,
+        HISTORY,
+        now=NOW,
+        verified_billing_context=context,
+    )
+
+    assert result["warnings"][0]["code"] == (
+        "possible_duplicate"
+    )
+
+
+def test_changed_historical_invoice_keeps_warning(tmp_path):
+    store, reviewer = setup_store(tmp_path)
+
+    attest(
+        reviewer, "pending_approval", "APPROVAL-001",
+        "2026-11-01", "2026-11-30"
+    )
+    attest(
+        reviewer, "paypal_invoice", "INV2-TEST",
+        "2026-10-01", "2026-10-31"
+    )
+
+    changed_history = [{
+        **HISTORY[0],
+        "item_name": "Website-maintenance",
+    }]
+
+    context = load_billing_context(
+        store, "APPROVAL-001", DRAFT, changed_history
+    )
+
+    assert context["historical"] == {}
+
+    result = review_invoice(
+        DRAFT,
+        changed_history,
+        now=NOW,
+        verified_billing_context=context,
+    )
+
+    assert result["warnings"][0]["code"] == (
+        "possible_duplicate"
+    )
+
+
+def test_legacy_evidence_without_fingerprint_keeps_warning(
+    tmp_path
+):
+    store, reviewer = setup_store(tmp_path)
+
+    attest(
+        reviewer, "pending_approval", "APPROVAL-001",
+        "2026-11-01", "2026-11-30"
+    )
+
+    store.save({
+        "subject_type": "paypal_invoice",
+        "subject_id": "INV2-TEST",
+        "source": "operator_review",
+        "verification_status": "approved",
+        "reviewer_id": "test-reviewer",
+        "evidence_reference": "LEGACY-TEST",
+        "reviewed_at": NOW.isoformat(),
+        "billing_period": {
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31",
+        },
+    })
+
+    context = load_billing_context(
+        store, "APPROVAL-001", DRAFT, HISTORY
+    )
+
+    assert context["historical"] == {}
+
+    result = review_invoice(
+        DRAFT,
+        HISTORY,
+        now=NOW,
+        verified_billing_context=context,
+    )
+
+    assert result["warnings"][0]["code"] == (
+        "possible_duplicate"
+    )

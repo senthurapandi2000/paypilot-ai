@@ -1,11 +1,22 @@
 ﻿import pytest
 
+from invoice_fingerprint import invoice_fingerprint
+from billing_evidence_binding import evidence_matches_invoice
+
 from billing_period_store import BillingPeriodEvidenceStore
 from billing_period_review_service import (
     BillingPeriodReviewService,
     BillingReviewAuthorizationError,
 )
 
+
+INVOICE = {
+    "customer_email": "buyer@example.com",
+    "item_name": "Website maintenance",
+    "quantity": 1,
+    "unit_price": "100.00",
+    "currency": "USD",
+}
 
 ADMIN_KEY = "test-only-operator-secret-123456789"
 DEMO_KEY = "test-public-demo-passphrase"
@@ -35,6 +46,7 @@ def submit(service, credential=ADMIN_KEY, **overrides):
         "start_date": "2026-10-01",
         "end_date": "2026-10-31",
         "evidence_reference": "TEST-EVIDENCE-001",
+        "invoice": INVOICE,
     }
     values.update(overrides)
     return service.attest(**values)
@@ -136,3 +148,36 @@ def test_existing_review_cannot_be_overwritten(setup_review):
     assert saved["billing_period"]["start_date"] == (
         "2026-10-01"
     )
+
+
+
+def test_attestation_binds_original_invoice(setup_review):
+    service, store = setup_review
+
+    saved = submit(service)
+
+    assert saved["invoice_fingerprint"] == (
+        invoice_fingerprint(INVOICE)
+    )
+    assert evidence_matches_invoice(saved, INVOICE) is True
+
+    changed = {
+        **INVOICE,
+        "unit_price": "500.00",
+    }
+
+    assert evidence_matches_invoice(saved, changed) is False
+
+
+def test_invalid_invoice_cannot_be_attested(setup_review):
+    service, store = setup_review
+
+    with pytest.raises(ValueError):
+        submit(
+            service,
+            invoice={**INVOICE, "quantity": 0},
+        )
+
+    assert store.get(
+        "paypal_invoice", "INV2-TEST-001"
+    ) is None

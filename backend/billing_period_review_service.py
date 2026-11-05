@@ -7,6 +7,7 @@ verification; production requires additional controls.
 
 import secrets
 from datetime import datetime, timezone
+from invoice_fingerprint import invoice_fingerprint
 
 
 class BillingReviewAuthorizationError(PermissionError):
@@ -50,6 +51,7 @@ class BillingPeriodReviewService:
         start_date,
         end_date,
         evidence_reference,
+        invoice,
     ):
         """Record an operator attestation after credential check."""
 
@@ -70,6 +72,7 @@ class BillingPeriodReviewService:
             "verification_status": "approved",
             "reviewer_id": self._operator_id,
             "evidence_reference": evidence_reference,
+            "invoice_fingerprint": invoice_fingerprint(invoice),
             "reviewed_at": datetime.now(
                 timezone.utc
             ).isoformat(),

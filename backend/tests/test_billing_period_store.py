@@ -109,3 +109,76 @@ def test_subject_types_are_isolated(tmp_path):
     assert store.get(
         "pending_approval", "INV2-TEST-001"
     ) is not None
+
+
+
+def test_fingerprint_persists_across_store_instances(tmp_path):
+    from invoice_fingerprint import invoice_fingerprint
+    from billing_evidence_binding import evidence_matches_invoice
+
+    invoice = {
+        "customer_email": "buyer@example.com",
+        "item_name": "Website maintenance",
+        "quantity": 1,
+        "unit_price": "100.00",
+        "currency": "USD",
+    }
+
+    digest = invoice_fingerprint(invoice)
+    path = tmp_path / "fingerprints.sqlite3"
+
+    first = BillingPeriodEvidenceStore(path)
+    first.save({
+        **RECORD,
+        "invoice_fingerprint": digest,
+    })
+
+    second = BillingPeriodEvidenceStore(path)
+    saved = second.get(
+        "paypal_invoice", "INV2-TEST-001"
+    )
+
+    assert saved["invoice_fingerprint"] == digest
+    assert evidence_matches_invoice(saved, invoice) is True
+
+
+def test_invalid_fingerprint_cannot_be_stored(tmp_path):
+    store = BillingPeriodEvidenceStore(
+        tmp_path / "fingerprints.sqlite3"
+    )
+
+    with pytest.raises(ValueError):
+        store.save({
+            **RECORD,
+            "invoice_fingerprint": "invalid-hash",
+        })
+
+    assert store.get(
+        "paypal_invoice", "INV2-TEST-001"
+    ) is None
+
+
+def test_legacy_record_has_no_fingerprint(tmp_path):
+    from billing_evidence_binding import evidence_matches_invoice
+
+    store = BillingPeriodEvidenceStore(
+        tmp_path / "legacy.sqlite3"
+    )
+
+    store.save(RECORD)
+
+    saved = store.get(
+        "paypal_invoice", "INV2-TEST-001"
+    )
+
+    assert saved["invoice_fingerprint"] is None
+
+    invoice = {
+        "customer_email": "buyer@example.com",
+        "item_name": "Website maintenance",
+        "quantity": 1,
+        "unit_price": "100.00",
+        "currency": "USD",
+    }
+
+    assert evidence_matches_invoice(saved, invoice) is False
