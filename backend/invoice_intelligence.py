@@ -1,6 +1,7 @@
 
 """Advisory invoice intelligence checks."""
 
+import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from statistics import median
@@ -16,8 +17,14 @@ def _total(invoice):
     ).quantize(Decimal("0.01"))
 
 
-def _normalized(value):
-    return " ".join(str(value).casefold().split())
+def _normalized_email(value):
+    return str(value).strip().casefold()
+
+
+def _normalized_service(value):
+    return " ".join(
+        re.sub(r"[^\w]+", " ", str(value).casefold()).split()
+    )
 
 
 def review_invoice(draft, history, now=None):
@@ -36,8 +43,8 @@ def review_invoice(draft, history, now=None):
     if now.tzinfo is None:
         raise ValueError("now must include a timezone")
 
-    email = _normalized(draft["customer_email"])
-    item = _normalized(draft["item_name"])
+    email = _normalized_email(draft["customer_email"])
+    item = _normalized_service(draft["item_name"])
     total = _total(draft)
 
     recent_matches = []
@@ -45,10 +52,10 @@ def review_invoice(draft, history, now=None):
 
     for previous in history:
         try:
-            if _normalized(previous["customer_email"]) != email:
+            if _normalized_email(previous["customer_email"]) != email:
                 continue
 
-            if _normalized(previous["item_name"]) != item:
+            if _normalized_service(previous["item_name"]) != item:
                 continue
 
             if str(
@@ -91,6 +98,7 @@ def review_invoice(draft, history, now=None):
         if (
             age <= timedelta(days=30)
             and old_total == total
+            and int(previous["quantity"]) == int(draft["quantity"])
         ):
             recent_matches.append(
                 previous.get("invoice_id")

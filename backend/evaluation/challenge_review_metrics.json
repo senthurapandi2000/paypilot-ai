@@ -1,0 +1,55 @@
+{
+  "dataset": "independently labeled synthetic challenge cases",
+  "total_cases": 16,
+  "confusion_matrix": {
+    "TP": 5,
+    "FP": 2,
+    "TN": 7,
+    "FN": 2
+  },
+  "metrics": {
+    "accuracy": 0.75,
+    "precision": 0.7142857142857143,
+    "recall": 0.7142857142857143,
+    "f1": 0.7142857142857143,
+    "false_positive_rate": 0.2222222222222222
+  },
+  "mismatches": [
+    {
+      "case_id": "CHALLENGE-003",
+      "category": "legitimate_recurring",
+      "expected": [],
+      "predicted": [
+        "possible_duplicate"
+      ],
+      "reason": "Separate authorized recurring billing period"
+    },
+    {
+      "case_id": "CHALLENGE-012",
+      "category": "two_point_five_times_baseline",
+      "expected": [
+        "unusual_amount"
+      ],
+      "predicted": [],
+      "reason": "Large increase for a stable-price service"
+    },
+    {
+      "case_id": "CHALLENGE-013",
+      "category": "authorized_large_project",
+      "expected": [],
+      "predicted": [
+        "unusual_amount"
+      ],
+      "reason": "Large amount explicitly approved for extra scope"
+    },
+    {
+      "case_id": "CHALLENGE-014",
+      "category": "insufficient_history_large_spike",
+      "expected": [
+        "unusual_amount"
+      ],
+      "predicted": [],
+      "reason": "Extreme increase despite limited history"
+    }
+  ]
+}

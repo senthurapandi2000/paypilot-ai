@@ -1,0 +1,93 @@
+{
+  "dataset": "evaluation\\invoice_review_cases.jsonl",
+  "dataset_type": "synthetic_rule_aligned",
+  "total_cases": 1000,
+  "overall": {
+    "tp": 400,
+    "fp": 0,
+    "tn": 600,
+    "fn": 0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "false_positive_rate": 0.0
+  },
+  "by_warning_type": {
+    "possible_duplicate": {
+      "tp": 300,
+      "fp": 0,
+      "tn": 700,
+      "fn": 0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0
+    },
+    "unusual_amount": {
+      "tp": 100,
+      "fp": 0,
+      "tn": 900,
+      "fn": 0,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0
+    }
+  },
+  "by_category": {
+    "cancelled_invoice": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "different_customer": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "different_service": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "different_total": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "duplicate_30_day_boundary": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "exact_duplicate": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "insufficient_history": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "normalized_duplicate": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "older_than_30_days": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    },
+    "unusual_amount": {
+      "total": 100,
+      "correct": 100,
+      "accuracy": 1.0
+    }
+  },
+  "mismatches": []
+}
