@@ -12,6 +12,29 @@ Built for the PayPal AI Hackathon 2026.
 
 > **Sandbox only.** This project creates draft invoices in a PayPal Sandbox account. It does not send invoices to real customers or transfer real money. The public demo requires a passphrase; contact the maintainer for authorized access. Never include API keys or the demo passphrase in issues or screenshots.
 
+## Product walkthrough
+
+### 1. Live dashboard
+
+![PayPilot AI dashboard](docs/screenshots/dashboard.png)
+
+### 2. Conversational invoice preparation
+
+![Gemini-powered invoice assistant](docs/screenshots/ai-assistant.png)
+
+### 3. Invoice Intelligence and human approval
+
+![Invoice duplicate warning and approval controls](docs/screenshots/invoice-review-warning.png)
+
+In this Sandbox example, PayPilot AI correctly extracts
+a $50 invoice and identifies a possible duplicate among
+six examined historical invoices. A human must review
+the warning before creating a draft.
+
+### 4. PayPal Sandbox invoice history
+
+![PayPal Sandbox invoice history](docs/screenshots/invoice-history.png)
+
 ## Why PayPilot AI?
 
 Drafting invoices manually can mean copying customer details, checking amounts, and searching older invoices for possible duplicates. PayPilot AI brings those steps into one reviewable workflow:
