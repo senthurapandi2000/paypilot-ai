@@ -6,6 +6,7 @@ PayPilot AI turns a natural-language request into a structured invoice preview, 
 
 Built for the PayPal AI Hackathon 2026.
 
+- **Watch the 2:52 demo video:** https://youtu.be/rD-rS_RW9GI
 - **Live sandbox demo:** https://paypilot-ai-icx7.onrender.com
 - **API:** https://paypilot-ai-api-lx1t.onrender.com/api/health
 - **Repository:** https://github.com/senthurapandi2000/paypilot-ai
